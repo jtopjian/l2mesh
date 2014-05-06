@@ -1,5 +1,5 @@
 # -*- mode: ruby -*-
-#    Copyright (C) 2013 Cloudwatt <libre.licensing@cloudwatt.com>
+#    Copyright (C) 2013,2014 Cloudwatt <libre.licensing@cloudwatt.com>
 #    Copyright (C) 2012 eNovance <licensing@enovance.com>
 #
 #    Author: Loic Dachary <loic@dachary.org>
@@ -334,7 +334,8 @@ class l2mesh::ip (
   $netmask
 ) {
 
-  $private_ip = regsubst($source, $re, $ip)
+  $tmp_ip = regsubst($source, $re, $ip)
+  $private_ip = regsubst($tmp_ip, '\.0', '.', 'G')
 
   $root = "/etc/tinc"
 
