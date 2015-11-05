@@ -1,6 +1,7 @@
 class l2mesh::configure (
   $interface     = 'eth0',
-  $tunnel_device = 'tun0'
+  $tunnel_device = 'tun0',
+  $meshid        = $::l2mesh::meshid,
 ) {
 
   include l2mesh::params

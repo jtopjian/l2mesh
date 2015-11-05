@@ -3,12 +3,13 @@ class l2mesh::l3 (
   $tunnel_device  = 'tun0',
   $tunnel_ip      = undef,
   $tunnel_netmask = undef,
+  $meshid    = $::l2mesh::meshid,
 ) {
 
   include l2mesh::params
 
   $etcdir = $::l2mesh::params::etcdir
-  $up = "${etcdir}/${interface}/tinc-up"
+  $up = "${etcdir}/${meshid}/tinc-up"
 
   if $tunnel_ip {
 
@@ -19,7 +20,7 @@ class l2mesh::l3 (
       content => "#!/bin/bash
 ifconfig ${tunnel_device} ${tunnel_ip} netmask ${tunnel_netmask}
 ",
-      require => File["${etcdir}/${interface}"],
+      require => File["${etcdir}/${meshid}"],
     }
 
   }

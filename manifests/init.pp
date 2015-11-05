@@ -131,6 +131,7 @@
 # goals are still met, though.
 #
 class l2mesh (
+  $meshid         = 'vpn',
   $interface      = 'eth0',
   $ip             = $::ipaddress_eth0,
   $port           = 655,
@@ -144,17 +145,20 @@ class l2mesh (
   class { 'l2mesh::configure':
     interface     => $interface,
     tunnel_device => $tunnel_device,
+    meshid        => $meshid,
   } ->
   class { 'l2mesh::keys':
     interface => $interface,
     ip        => $ip,
     port      => $port,
+    meshid    => $meshid,
   } ->
   class { 'l2mesh::l3':
     interface      => $interface,
     tunnel_device  => $tunnel_device,
     tunnel_ip      => $tunnel_ip,
     tunnel_netmask => $tunnel_netmask,
+    meshid         => $meshid,
   } ->
   class { 'l2mesh::service': } ->
   anchor { 'l2mesh::end': }
