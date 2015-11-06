@@ -3,7 +3,6 @@ class l2mesh::l3 (
   $tunnel_device  = 'tun0',
   $tunnel_ip      = undef,
   $tunnel_netmask = undef,
-  $meshid    = $::l2mesh::meshid,
 ) {
 
   include l2mesh::params
