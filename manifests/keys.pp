@@ -51,7 +51,7 @@ Compression = 0
 
 ${public_key}
 ",
-    tag     => $tag,
+    tag     => $tag, 
     notify  => Service['tinc'],
     require => Package['tinc'],
   }
