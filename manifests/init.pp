@@ -22,6 +22,9 @@
 #
 # == Parameters
 #
+# [*meshid*] The uuid of the mesh (nodes with same uuid will be members).
+#   => default: vpn
+#
 # [*interface*] The interface to create the tunnel/mesh through
 #
 # [*ip*] ip address of the node
@@ -38,6 +41,7 @@
 # == Example
 #
 #  class { 'l2mesh':
+#    meshid        => 'a7d8857d',
 #    interface     => 'eth0',
 #    ip            => $::ipaddress_eth0,
 #    tunnel_device => 'tun0',
@@ -107,7 +111,7 @@
 # * Add a test that checks if instantiating two lmesh does not run into
 #   a conflict ( l2mehs(ip = 1) + l2mesh(ip = 2) ). How is it done with
 #   rspec puppet ?
-# 
+#
 # * Change into defined types to support multiple tunnels per node.
 #
 # == Dependencies
@@ -160,7 +164,6 @@ class l2mesh (
     tunnel_device  => $tunnel_device,
     tunnel_ip      => $tunnel_ip,
     tunnel_netmask => $tunnel_netmask,
-    meshid         => $meshid,
   } ->
   class { 'l2mesh::service': } ->
   anchor { 'l2mesh::end': }
