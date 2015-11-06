@@ -8,7 +8,7 @@ class l2mesh::keys (
   include l2mesh::params
 
   $etcdir = $::l2mesh::params::etcdir
-  $root = "${etcdir}/${meshid}"
+  $root = "${etcdir}/${interface}"
   $hosts = "${root}/hosts"
   $tag = "tinc_${interface}_${meshid}"
 
@@ -51,7 +51,7 @@ Compression = 0
 
 ${public_key}
 ",
-    tag     => $tag, 
+    tag     => $tag,
     notify  => Service['tinc'],
     require => Package['tinc'],
   }
