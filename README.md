@@ -81,6 +81,7 @@ Here is an example usage that can be included in */etc/puppet/manifests/site.pp*
     node /MACHINE-A.example.com/, /MACHINE-B.example.com/ {
 
       class { 'l2mesh':
+        meshid        => 'a7d8857d',
         interface     => 'eth0'
         ip            => $::ipaddress_eth0,
         port          => 656,
@@ -106,6 +107,28 @@ hostname of the machine to the node list. For instance,
 
     node /MACHINE-A.example.com/, /MACHINE-B.example.com/, /MACHINE-C.example.com/  {
     ...
+
+
+Using different meshid will group/connect only mesh members having the same mesh uuid.
+
+It can also be configured using Hiera (keeping includes of l2mesh class for every nodes in site.pp):
+
+    Node 1:
+        profile::vm::l2mesh::meshid:    'a7d8857c'
+        profile::vm::l2mesh::tunnel_ip: '192.168.100.1'
+
+    Node 2:
+        profile::vm::l2mesh::meshid:    'a7d8857c'
+        profile::vm::l2mesh::tunnel_ip: '192.168.100.2'
+
+    Node 3:
+        profile::vm::l2mesh::meshid:    '91e8cbd8-8475-11e5-8bcf-feff819cdc9f'
+        profile::vm::l2mesh::tunnel_ip: '192.168.100.1'
+
+    Node 4:
+        profile::vm::l2mesh::meshid:    '91e8cbd8-8475-11e5-8bcf-feff819cdc9f'
+        profile::vm::l2mesh::tunnel_ip: '192.168.100.2'
+
 
 l2mesh is not
 =============

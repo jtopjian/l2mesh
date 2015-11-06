@@ -2,6 +2,7 @@ class l2mesh::keys (
   $interface = 'eth0',
   $ip        = $::ipaddress_eth0,
   $port      = 655,
+  $meshid    = $::l2mesh::meshid,
 ) {
 
   include l2mesh::params
@@ -9,7 +10,7 @@ class l2mesh::keys (
   $etcdir = $::l2mesh::params::etcdir
   $root = "${etcdir}/${interface}"
   $hosts = "${root}/hosts"
-  $tag = "tinc_${interface}"
+  $tag = "tinc_${interface}_${meshid}"
 
   $fqdn = regsubst($::fqdn, '[._-]+', '', 'G')
   $host = "${hosts}/${fqdn}"
@@ -17,7 +18,7 @@ class l2mesh::keys (
   $private = "${root}/rsa_key.priv"
   $public = "${root}/rsa_key.pub"
 
-  $keys = tinc_keygen("${::l2mesh::params::keys_directory}/${interface}/${fqdn}")
+  $keys = tinc_keygen("${::l2mesh::params::keys_directory}/${meshid}/${fqdn}")
 
   $private_key = $keys[0]
   $public_key = $keys[1]
