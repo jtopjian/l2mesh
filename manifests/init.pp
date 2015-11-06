@@ -1,45 +1,17 @@
-# -*- mode: ruby -*-
-#    Copyright (C) 2013,2014 Cloudwatt <libre.licensing@cloudwatt.com>
-#    Copyright (C) 2012 eNovance <licensing@enovance.com>
-#
-#    Author: Loic Dachary <loic@dachary.org>
-#
-#    This program is free software: you can redistribute it and/or modify
-#    it under the terms of the GNU Affero General Public License as published by
-#    the Free Software Foundation, either version 3 of the License, or
-#    (at your option) any later version.
-#
-#    This program is distributed in the hope that it will be useful,
-#    but WITHOUT ANY WARRANTY; without even the implied warranty of
-#    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#    GNU Affero General Public License for more details.
-#
-#    You should have received a copy of the GNU Affero General Public License
-#    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-#
-# How to write documentation
-# http://docs.puppetlabs.com/guides/style_guide.html#puppet-doc
-#
 # == Define: l2mesh
 #
 # Create and update L2 ( http://en.wikipedia.org/wiki/Link_layer )
-# mesh. The mesh named *lemesh* will show as a new interface on each
-# machine participating in the mesh, as a new ethernet interface. For
-# instance:
+# mesh.
 #
-#   $ ip link show dev lemesh
-#   4: lemesh: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast
-#      link/ether 72:75:6e:60:59:f0 brd ff:ff:ff:ff:ff:ff
-#
-# The interface is created by a *tincd* daemon ( one per mesh ) which
-# maintains a connection to all other machines in the mesh.
+# The mesh interface is created by a *tincd* daemon ( one per mesh )
+# which maintains a connection to all other machines in the mesh.
 #
 # Given three bare metal machines hosted at http://hetzner.de/,
 # http://ovh.fr/ and http://online.net/, *l2mesh* can be used to
-# create a new ethernet interface *lemesh* on each of them that
+# create a new ethernet interface on each of them that
 # behaves as if they had a physical ethernet card connected to one
 # hardware switch in the same room. The machine at *hetzner* could be
-# the DHCP server providing the IP for the *lemesh* interface of the
+# the DHCP server providing the IP for the interface of the
 # OVH machine. In addition, if the connection between the *hetzner*
 # machine and the *ovh* machine does not work, the packets will use
 # the *online* machine as an intermediary, making the mesh resilient
@@ -50,49 +22,27 @@
 #
 # == Parameters
 #
-# [*name*] name of the mesh
+# [*interface*] The interface to create the tunnel/mesh through
 #
 # [*ip*] ip address of the node
 #
 # [*port*] port number used by each tincd
 #        (see the tinc.conf manual page for more information)
 #
+# [*tunnel_device*] The tunnel device/interface created
+#
+# [*tunnel_ip*] The IP address on the tunnel
+#
+# [*tunnel_netmask*] The netmask on the tunnel
+#
 # == Example
 #
-#  include l2mesh::params
-#  l2mesh { 'lemesh':
-#      ip               => $::ipaddress_eth0,
-#      port		=> 655,
+#  class { 'l2mesh':
+#    interface     => 'eth0',
+#    ip            => $::ipaddress_eth0,
+#    tunnel_device => 'tun0',
+#    tunnel_ip     => '192.168.255.10',
 #  }
-#
-# == Starting and reloading the tinc daemon
-#
-# There is one daemon for each mesh and all of them are run by a
-# single /etc/init.d/tinc script which is uncommon. To cope with this
-# situation, a combination of calls to the /etc/init.d/tinc script and
-# the *tincd* binary is used, as follows:
-#
-# [add a mesh] when a new mesh is created, no daemon is running for
-#       it. When tincd tries to signal it with USR1 to check for its
-#       existence, it will fail. /etc/init.d/tinc is called and will
-#       attempt to start all mesh. It will fail for all but the newly
-#       created, because they already run. But it will succeed for the
-#       newly created mesh, which is the intended outcome.
-#
-# [reboot and shutdown] The init script will loop over all mesh and
-#       start / stop them.
-#
-# [configuration change] The status of the deamon for which a
-#      configuration file was changed is tested by sending it the USR1
-#      signal. If sending the signal fails, the mesh will be started
-#      as if it has just been created. If sending the signal succeeds,
-#      the daemon will be sent the HUP signal and will gracefully
-#      reload the configuration files. In particular it will notice a
-#      change in the list of tincd peers it must connect to.
-#
-# [remove a mesh] there is no support to remove a mesh other than
-#      removing the files and exported resources from the puppet
-#      database manually.
 #
 # == Generating and distributing keys ==
 #
@@ -145,9 +95,6 @@
 #
 # == TODO / Roadmap
 #
-# * Add support to remove a mesh which implies removing the associated
-#   exported resources
-#
 # * Test for exported resources
 #   https://groups.google.com/forum/#!topic/puppet-users/XgQXt5n017o[1-25]
 #
@@ -160,6 +107,8 @@
 # * Add a test that checks if instantiating two lmesh does not run into
 #   a conflict ( l2mehs(ip = 1) + l2mesh(ip = 2) ). How is it done with
 #   rspec puppet ?
+# 
+# * Change into defined types to support multiple tunnels per node.
 #
 # == Dependencies
 #
@@ -168,209 +117,52 @@
 # == Authors
 #
 # Loic Dachary <loic@dachary.org>
+# Joe Topjian <joe@topjian.net>
+# Sebastien Fuchs <sebastien@les-infogereurs.com>
 #
 # == Copyright
 #
+# Copyright 2015 Sebastien Fuchs <sebastien@les-infogereurs.com>
+# Copyright 2014 Joe Topjian <joe.topjian@cybera.ca>
 # Copyright 2013 Cloudwatt <libre.licensing@cloudwatt.com>
 # Copyright 2012 eNovance <licensing@enovance.com>
 #
-
-class l2mesh(
-  $interface,
-  $ip,
-  $port,
+# == Notes
+#
+# This module was significantly rewrote by Joe Topjian. The original
+# goals are still met, though.
+#
+class l2mesh (
+  $meshid         = 'vpn',
+  $interface      = 'eth0',
+  $ip             = $::ipaddress_eth0,
+  $port           = 655,
+  $tunnel_device  = 'tun0',
+  $tunnel_ip      = undef,
+  $tunnel_netmask = undef,
 ) {
 
-  include l2mesh::params
-  include concat::setup
+  anchor { 'l2mesh::start': } ->
+  class { 'l2mesh::install': } ->
+  class { 'l2mesh::configure':
+    interface     => $interface,
+    tunnel_device => $tunnel_device,
+    meshid        => $meshid,
+  } ->
+  class { 'l2mesh::keys':
+    interface => $interface,
+    ip        => $ip,
+    port      => $port,
+    meshid    => $meshid,
+  } ->
+  class { 'l2mesh::l3':
+    interface      => $interface,
+    tunnel_device  => $tunnel_device,
+    tunnel_ip      => $tunnel_ip,
+    tunnel_netmask => $tunnel_netmask,
+    meshid         => $meshid,
+  } ->
+  class { 'l2mesh::service': } ->
+  anchor { 'l2mesh::end': }
 
-  $package = $::l2mesh::params::tinc_package_name
-
-  if ! defined(Package[$package]) {
-    package { $package:
-      ensure => present,
-    }
-  }
-
-  $start = "start_${interface}"
-  $running = "tincd --net=${interface} --kill=USR1"
-
-  exec { $start:
-    command	=> "tincd --net=${interface} && ${running}",
-    onlyif	=> "! ${running}",
-    provider	=> 'shell',
-  }
-
-  $reload = "reload_${interface}"
-
-  exec { $reload:
-    command	=> "tincd --net=${interface} --kill=HUP",
-    provider	=> 'shell',
-    refreshonly	=> true,
-  }
-
-  $boots = '/etc/tinc/nets.boot'
-
-  if ! defined(Concat[$boots]) {
-    concat { $boots:
-      owner	=> root,
-      group	=> 0,
-      mode	=> '0400';
-    }
-  }
-
-  concat::fragment { "${boots}_${interface}":
-    target	=> $boots,
-    content	=> "${interface}\n",
-  }
-
-  $root = "/etc/tinc/${interface}"
-
-  if ! defined(File[$root]) {
-    file { $root:
-      ensure      => 'directory',
-      owner       => root,
-      group       => root,
-      mode        => '0755',
-    }
-  }
-
-  $hosts = "${root}/hosts"
-
-  file { $hosts:
-    ensure      => 'directory',
-    owner       => root,
-    group       => root,
-    mode        => '0755',
-    require	=> File[$root],
-  }
-
-  $fqdn = regsubst($::fqdn, '[._-]+', '', 'G')
-  $host = "${hosts}/${fqdn}"
-
-  $private = "${root}/rsa_key.priv"
-  $public = "${root}/rsa_key.pub"
-
-  $keys = tinc_keygen("${::l2mesh::params::keys_directory}/${interface}/${fqdn}")
-
-  $private_key = $keys[0]
-  $public_key = $keys[1]
-
-  file { $private:
-    owner       => root,
-    group       => root,
-    mode        => '0400',
-    content     => $private_key,
-    notify	=> Exec[$reload],
-    before      => Exec[$start],
-  }
-
-  file { $public:
-    owner       => root,
-    group       => root,
-    mode        => '0444',
-    content     => $public_key,
-    notify	=> Exec[$reload],
-    before      => Exec[$start],
-  }
-
-  $tag = "tinc_${interface}"
-
-  @@file { $host:
-    owner       => root,
-    group       => root,
-    mode        => '0444',
-    require     => File[$hosts],
-    notify	=> Exec[$reload],
-    before      => Exec[$start],
-    content     => "Address = $ip
-Port = $port
-Compression = 0
-
-${public_key}
-",
-    tag         => $tag,
-  }
-
-  File <<| tag == $tag |>>
-
-  $conf = "${root}/tinc.conf"
-
-  concat { $conf:
-    owner       => root,
-    group       => root,
-    mode        => 444,
-    require     => File[$root],
-    notify	=> Exec[$reload],
-  }
-
-  concat::fragment { "${conf}_head":
-    target      => $conf,
-    content     => "
-Name = ${fqdn}
-AddressFamily = ipv4
-Device = /dev/net/tun
-Mode = switch
-
-",
-  }
-
-  $tag_conf = "${tag}_connect"
-
-  @@concat::fragment { "${tag_conf}_${fqdn}":
-    target      => $conf,
-    tag         => "${tag_conf}_${fqdn}",
-    content     => "ConnectTO = ${fqdn}\n",
-  }
-
-  Concat::Fragment <<| tag != "${tag_conf}_${fqdn}" |>>
-}
-
-class l2mesh::ip (
-  $interface,
-  $source,
-  $re,
-  $ip,
-  $netmask
-) {
-
-  $tmp_ip = regsubst($source, $re, $ip)
-  $private_ip = regsubst($tmp_ip, '\.0', '.', 'G')
-
-  $root = "/etc/tinc"
-
-  if ! defined(File[$root]) {
-    file { $root:
-      ensure      => 'directory',
-      owner       => root,
-      group       => root,
-      mode        => '0755',
-      before      => Class['l2mesh'],
-    }
-  }
-
-  $net = "${root}/${interface}"
-
-  if ! defined(File[$net]) {
-    file { $net:
-      ensure      => 'directory',
-      owner       => root,
-      group       => root,
-      mode        => '0755',
-      require     => File[$root],
-    }
-  }
-
-  $up = "${net}/tinc-up"
-  if ! defined(File[$up]) {
-    file { $up:
-      owner       => root,
-      group       => root,
-      mode        => '0544',
-      content     => "#!/bin/bash                                                                                                                     
-ifconfig ${interface} ${private_ip} netmask $netmask
-",
-      require     => File[$net],
-    }
-  }
 }

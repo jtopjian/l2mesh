@@ -4,7 +4,7 @@ Introduction
 
 [l2mesh](http://redmine.the.re/projects/l2mesh "l2mesh") is a
 [tinc](http://www.tinc-vpn.org/ "tinc") based virtual switch,
-implemented as a puppet module. 
+implemented as a puppet module.
 
 It creates a new ethernet interface on the machine and connects it to
 the switch.
@@ -30,31 +30,31 @@ machines and a hardware switch:
     |    B     +-----+
     |                |
     +----------------+
-  
+
 Each of the three machines ( *A, B, C* ) have a physical ethernet
 connector which shows as *eth0*. They are connected with a cable to a
 *SWITCH* which transmits the packet coming from *MACHINE A* to *MACHINE B*
-or *MACHINE C*. 
+or *MACHINE C*.
 
-With *l2mesh*, a new virtual interface ( named *L2M* below ) is
-created on each machine and they are all connected by a [TINC daemon](http://www.tinc-vpn.org/). 
+With *l2mesh*, a new virtual interface ( named *tun0* below ) is
+created on each machine and they are all connected by a [TINC daemon](http://www.tinc-vpn.org/).
 Packets go from *MACHINE A* to *MACHINE B* or *MACHINE C* as if they were
 connected to a physical switch.
 
     +---------+-----+
     |         |eth0 |
     |         +-----+
-    | MACHINE | L2M |
+    | MACHINE |tun0 |
     |    A    +-----+
     |           TINC+---
     +--------------++   \-------
                    |            \-------   +---------------+
                    |                    X--+TINC           |
                    |            /-------   +-----+         |
-     +-------------+-+   /------           | L2M | MACHINE |
+     +-------------+-+   /------           |tun0 | MACHINE |
      |           TINC+---                  +-----+    C    |
      |         +-----+                     |eth0 |         |
-     | MACHINE | L2M |                     +-----+---------+
+     | MACHINE |tun0 |                     +-----+---------+
      |    B    +-----+
      |         |eth0 |
      +---------+-----+
@@ -65,8 +65,8 @@ Here is how it looks on each machine:
     2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast state UP qlen 1000
        link/ether fa:16:3e:48:ae:6f brd ff:ff:ff:ff:ff:ff
 
-    $ ip link show dev L2M
-    2: L2M: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast
+    $ ip link show dev tun0
+    2: tun0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast
        link/ether 72:75:6e:60:59:f0 brd ff:ff:ff:ff:ff:ff
 
 Usage
@@ -79,17 +79,19 @@ Usage
 Here is an example usage that can be included in */etc/puppet/manifests/site.pp*
 
     node /MACHINE-A.example.com/, /MACHINE-B.example.com/ {
-      include l2mesh::params
-      
-      l2mesh { 'L2M':
-        ip                  => $::ipaddress_eth0,
-        port                => 656,
+
+      class { 'l2mesh':
+        interface     => 'eth0'
+        ip            => $::ipaddress_eth0,
+        port          => 656,
+        tunnel_device => 'tun0',
+        tunnel_ip     => '192.168.255.1',
       }
     }
 
-On both *MACHINE-A* and *MACHINE-B*, it will 
+On both *MACHINE-A* and *MACHINE-B*, it will
 
-* create the *L2M* ethernet interface 
+* create the *tun0* ethernet interface
 * run the *tincd* daemon to listen on port *656* and
   bind it to the *$::ipaddress_eth0* IP address
 
@@ -98,7 +100,7 @@ In addition, both machines will try to reach each other:
 * *tincd* on *MACHINE-A* will try to connect to *tincd* on *MACHINE-B*
 * *tincd* on *MACHINE-B* will try to connect to *tincd* on *MACHINE-A*
 
-Adding a new machine to the *L2M* virtual switch is done by adding the
+Adding a new machine to the *tun* virtual switch is done by adding the
 hostname of the machine to the node list. For instance,
 *MACHINE-C.example.com* can be added with:
 
@@ -110,36 +112,6 @@ l2mesh is not
 
 * l2mesh is not an equivalent to *brctl* : it is a switch made of *tinc* daemons running on multiple machines
 
-* l2mesh does not know anything about IP addresses or L3 routing. Here is a puppet snippet that shows how to assign IP addresses to an interface created by l2mesh, using the hostname to figure it out. For instance, bm0001.the.re will have the IP 192.168.100.1, bm0002.the.re will have the IP 192.168.100.2 etc. This is done by creating a *tinc-up* script that is run by *tincd* each time the interface is up.
-
-          $private_ip = regsubst($::fqdn, '^bm0+(\d+).*', '192.168.100.\1')
-        
-          file { '/etc/tinc':
-            ensure      => 'directory',
-            owner       => root,
-            group       => root,
-            mode        => '0755',
-            before      => L2mesh['L2M'],
-          }
-        
-          file { '/etc/tinc/L2M':
-            ensure      => 'directory',
-            owner       => root,
-            group       => root,
-            mode        => '0755',
-            require     => File['/etc/tinc'],
-          }
-        
-          file { '/etc/tinc/L2M/tinc-up':
-            owner       => root,
-            group       => root,
-            mode        => '0544',
-            content     => "#!/bin/bash                                                                                                                                         
-        ifconfig L2M ${private_ip} netmask 255.255.255.0                                                                                                                      
-        ",
-            require     => File['/etc/tinc/L2M'],
-          }
-        
 Implementation
 ==============
 
@@ -149,8 +121,11 @@ License
 =======
 
     Copyright (C) 2012 eNovance <licensing@enovance.com>
+                  2014 Joe Topjian <joe@topjian.net>
 
-	Author: Loic Dachary <loic@dachary.org>
+	Authors:
+    Loic Dachary <loic@dachary.org>
+    Joe Topjian <joe@topjian.net>
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Affero General Public License as published by
@@ -169,8 +144,10 @@ License
 Running tests
 =============
 
+    l2mesh has been heavily rewritten. Tests do not work right now.
+
     apt-get install -y tinc
-    apt-get install -y ruby1.8 rubygems 
+    apt-get install -y ruby1.8 rubygems
     apt-get remove -y ruby1.9.1
     GEM_HOME=$HOME/.gem-installed gem install --include-dependencies --no-rdoc --no-ri --version 1.1.3 diff-lcs
     GEM_HOME=$HOME/.gem-installed gem install --include-dependencies --no-rdoc --no-ri --version 1.6.14 facter

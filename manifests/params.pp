@@ -21,6 +21,8 @@ class l2mesh::params {
     'Debian': {
       $keys_directory           = '/var/lib/puppet/l2mesh'
       $tinc_package_name        = 'tinc'
+      $tinc_service_name        = 'tinc'
+      $etcdir                   = '/etc/tinc'
     }
     'RedHat': {
       $keys_directory           = '/var/lib/puppet/l2mesh'

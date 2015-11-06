@@ -1,6 +1,6 @@
 #
 #    Copyright (C) 2012 eNovance <licensing@enovance.com>
-#	
+#
 #    Author: Loic Dachary <loic@dachary.org>
 #
 #    This program is free software: you can redistribute it and/or modify
