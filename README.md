@@ -112,6 +112,7 @@ hostname of the machine to the node list. For instance,
 Using different meshid will group/connect only mesh members having the same mesh uuid.
 
 It can also be configured using Hiera (keeping includes of l2mesh class for every nodes in site.pp):
+
     Node 1:
         profile::vm::l2mesh::meshid:    'a7d8857c'
         profile::vm::l2mesh::tunnel_ip: '192.168.100.1'
