@@ -1,6 +1,7 @@
 class l2mesh::configure (
   $interface     = 'eth0',
-  $tunnel_device = 'tun0'
+  $tunnel_device = 'tun0',
+  $meshid        = $::l2mesh::meshid,
 ) {
 
   include l2mesh::params
@@ -12,7 +13,7 @@ class l2mesh::configure (
   $hosts = "${root}/hosts"
   $conf = "${root}/tinc.conf"
   $fqdn = regsubst($::fqdn, '[._-]+', '', 'G')
-  $tag = "tinc_${interface}"
+  $tag = "tinc_${interface}_${meshid}"
   $tag_conf = "${tag}_connect"
 
   concat { $boots:
@@ -63,9 +64,9 @@ Mode = switch
 
   @@concat::fragment { "${tag_conf}_${fqdn}":
     target      => $conf,
-    tag         => "${tag_conf}_${fqdn}",
+    tag         => "${tag_conf}",
     content     => "ConnectTO = ${fqdn}\n",
   }
 
-  Concat::Fragment <<| tag != "${tag_conf}_${fqdn}" |>>
+  Concat::Fragment <<| tag == "${tag_conf}" and title != "${tag_conf}_${fqdn}" |>>
 }

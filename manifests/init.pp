@@ -107,7 +107,7 @@
 # * Add a test that checks if instantiating two lmesh does not run into
 #   a conflict ( l2mehs(ip = 1) + l2mesh(ip = 2) ). How is it done with
 #   rspec puppet ?
-#
+# 
 # * Change into defined types to support multiple tunnels per node.
 #
 # == Dependencies
@@ -118,9 +118,11 @@
 #
 # Loic Dachary <loic@dachary.org>
 # Joe Topjian <joe@topjian.net>
+# Sebastien Fuchs <sebastien@les-infogereurs.com>
 #
 # == Copyright
 #
+# Copyright 2015 Sebastien Fuchs <sebastien@les-infogereurs.com>
 # Copyright 2014 Joe Topjian <joe.topjian@cybera.ca>
 # Copyright 2013 Cloudwatt <libre.licensing@cloudwatt.com>
 # Copyright 2012 eNovance <licensing@enovance.com>
@@ -131,6 +133,7 @@
 # goals are still met, though.
 #
 class l2mesh (
+  $meshid         = 'vpn',
   $interface      = 'eth0',
   $ip             = $::ipaddress_eth0,
   $port           = 655,
@@ -144,11 +147,13 @@ class l2mesh (
   class { 'l2mesh::configure':
     interface     => $interface,
     tunnel_device => $tunnel_device,
+    meshid        => $meshid,
   } ->
   class { 'l2mesh::keys':
     interface => $interface,
     ip        => $ip,
     port      => $port,
+    meshid    => $meshid,
   } ->
   class { 'l2mesh::l3':
     interface      => $interface,
